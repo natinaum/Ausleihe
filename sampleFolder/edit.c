@@ -64,24 +64,6 @@ _Bool isJSONENTR(char * line){
 			}
 		}
 	}
-
-	//for(int i =0;i<strlen(line);i++){
-	//	if(line[i]==':'){
-	//		for(;i<strlen(line);i++){
-	//			if(line[i]=='"'){
-	//				for(;i<strlen(line);i++){
-	//					if(line[i]=='"'){
-	//						for(;i<strlen(line);i++){
-	//							if(line[i]==';'){
-	//								return 1;
-	//							}
-	//						}
-	//					}
-	//				}
-	//			}
-	//		}
-	//	}
-	//}
 	return 0;
 }
 
