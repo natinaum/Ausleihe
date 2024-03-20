@@ -11,25 +11,38 @@
 #define LNADD     5
 #define ARGS_N 6
 
+// char* Array mit möglichen Argumenten mit den das CLI-Tool aufgerufen werden kann
 char Args[ARGS_N][MAX_CMD_LEN]={"get","set","add","link","addperson","lnadd"};
 
 
 
 
 
+// Ausgabe der Hilfe
+void help(unsigned char status){
+	switch(status){
+		case 0:
+			printf("\
+			edit get <path> <bezeichner> //prints value from json file\n \
+			edit set <path> <bezeichner> <value> //sets value of json file\n \n \
+			edit add <path> <bezeichner> <type(vorlage)>  //typ: Objekt/Person\n \
+			edit link <path> <path> //links json file from objekt/person/ort folder (path --simlink--> path)\n \n \
+			complex functions:\n \
+			edit addPerson <Name>\n \
+			edit lnadd <path> <type> <person/ort> //links object to person or place\n \
+			\n");
+			break;
+		case 1:
+			printf("LEIDER NOCH NICHT HILFREICH\n");
+			break;
+		default:
+			printf("HELP DEFAULT\n");
+	}
 
-void help(){
-	printf("\
-	edit get <path> <bezeichner> //prints value from json file\n \
-	edit set <path> <bezeichner> <value> //sets value of json file\n \n \
-	edit add <path> <bezeichner> <type(vorlage)>  //typ: Objekt/Person\n \
-	edit link <path> <path> //links json file from objekt/person/ort folder (path --simlink--> path)\n \n \
-	complex functions:\n \
-	edit addPerson <Name>\n \
-	edit lnadd <path> <type> <person/ort> //links object to person or place\n \
-	\n"); 
 }
 
+//Schlägt Funktionsname in "Args[][]" nach und gibt die ID der zu 
+//tätigenden Operation zurück
 int FunctionNameToID(char * function){
 	int i=ARGS_N;
 	while(i){
@@ -39,30 +52,43 @@ int FunctionNameToID(char * function){
 	return -1;
 }
 
+//Gibt Zahl zwischen 1 und 0 zurück. 0 wenn Input kein reguläres JSON Feld,
+//1 wenn Input regulärem JSON Feld entspricht
 _Bool isJSONENTR(char * line){
-	for(int i =0;i<strlen(line);i++){
-		if(line[i]==':'){
-			for(;i<strlen(line);i++){
-				if(line[i]=='"'){
-					for(;i<strlen(line);i++){
-						if(line[i]=='"'){
-							for(;i<strlen(line);i++){
-								if(line[i]==';'){
-									return 1;
-								}
-							}
-						}
-					}
+	for(int i =0;i<strlen(line);i++) if(line[i]==':'){
+		for(;i<strlen(line);i++) if(line[i]=='"'){
+			for(;i<strlen(line);i++)if(line[i]=='"'){
+				for(;i<strlen(line);i++) if(line[i]==';'){
+					return 1;
 				}
 			}
 		}
 	}
+
+	//for(int i =0;i<strlen(line);i++){
+	//	if(line[i]==':'){
+	//		for(;i<strlen(line);i++){
+	//			if(line[i]=='"'){
+	//				for(;i<strlen(line);i++){
+	//					if(line[i]=='"'){
+	//						for(;i<strlen(line);i++){
+	//							if(line[i]==';'){
+	//								return 1;
+	//							}
+	//						}
+	//					}
+	//				}
+	//			}
+	//		}
+	//	}
+	//}
 	return 0;
 }
 
 
+// kopiert Inhalt einer JSON Zeile - mit Feldern - in obj
+// char** ([0] Bezeichner, [1] Inhalt)
 int GetObj(char *line,char ** obj){
-	// kopiert Inhalt einer JSON Zeile - mit Feldern - in obj char** (0 Bezeichner, 1 Inhalt)
 	char * Bezeichner=obj[0];
 	char * Value=obj[1];
 	if(isJSONENTR(line)){
@@ -86,8 +112,17 @@ int GetObj(char *line,char ** obj){
 }
 
 
-
-void get(char * path, char * feldname){ //Gibt Inhalt eines angegebenen Feldes zurück
+//Gibt Inhalt eines angegebenen Feldes zurück
+void getPossibleFields(FILE * fp,char ** obj){ 
+	char *line = NULL;
+	size_t len = 0;
+	rewind(fp);
+	while(getline(&line, &len, fp) != -1) {
+		 	GetObj(line, obj);
+			printf("%s\n",obj[0]);
+	}
+}
+void get(char * path, char * feldname){ 
 	printf("Hole aus %s folgendes Feld: %s \n", path, feldname);
 	char ** obj=malloc(2);
 	obj[0]=malloc(50);
@@ -98,19 +133,31 @@ void get(char * path, char * feldname){ //Gibt Inhalt eines angegebenen Feldes z
 	char *line = NULL;
 	size_t len = 0;
 	while(getline(&line, &len, fp) != -1) {
-		 if(!GetObj(line, obj)&&!strcmp(obj[0],feldname))
-		 printf("%s\n",obj[1]);
+		 if(!GetObj(line, obj)&&!strcmp(obj[0],feldname)){
+		 	printf("%s\n",obj[1]);
+			goto free;
+		 }
 	}
+	
+	printf("%s nicht in %s gefunden \nMögliche Felder:\n", feldname, path);
+	getPossibleFields(fp,obj);
+free:
 	free (obj[0]);
 	free (obj[1]);
 	free (obj);
 	free (line);
 	fclose(fp);
 }
+
+// Schreibt Kopie einer Datei mit verändertem Feldinhalt in ein TMP-File
+// Ersetzt die ursprüngliche Datei mit der temporären
+// (Setzt Wert eines Feldes in dem mitgegebenen Objekt)
 void set(char * path, char * feldname, char *newValue){
+	//Platz allozieren für zu bearbeitendes Feld
 	char ** obj=malloc(2);
 	obj[0]=malloc(50);
 	obj[1]=malloc(50);
+	// Öffnen der mitgegebenen Datei und eines Temp Files
 	FILE * fp;
 	printf("test\n");
 	fp=fopen(path, "rw");
@@ -118,7 +165,8 @@ void set(char * path, char * feldname, char *newValue){
 	char  TEMPLATE[]="./FXXXXXX";
 	int fd=mkstemp(TEMPLATE);
 	tmp=fdopen(fd,"w");
-
+	
+	//Durchlesen der Datei -> Feld kopieren || Feld bearbeiten
 	char *line = NULL;
 	size_t len = 0;
 	while(getline(&line, &len, fp) != -1) {
@@ -138,10 +186,14 @@ void set(char * path, char * feldname, char *newValue){
 	free (line);
 	fclose(fp);
 	fclose(tmp);
+	//mv tmp > Ursprünglichem Pfad
 	rename(TEMPLATE, path);
 }
 
+void add(
+	printf("ADD\n");
 
+//Main Funktion: ruft zu Aufruf passende Funktion auf
 int main(int argN,char ** args){
 	int FunctionID=-1;
 	if(argN>1){
@@ -153,16 +205,15 @@ int main(int argN,char ** args){
 		case GET:
 			if(argN>3)
 				get(args[2],args[3]);
-				else help();
+			else help(1);
 			break;
 				
 		case SET:
 			if(argN>4)
 				set(args[2],args[3],args[4]);
-			else help();
+			else help(1);
 			break;
 		case ADD:
-			printf("GET\n");
 			break;
 		case LINK:
 			printf("LINK\n");
@@ -174,7 +225,7 @@ int main(int argN,char ** args){
 			printf("LNADD\n");
 			break;
 		default:
-			help();
+			help(0);
 	}
 
 }
