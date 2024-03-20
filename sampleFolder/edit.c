@@ -135,6 +135,15 @@ free:
 // Schreibt Kopie einer Datei mit verändertem Feldinhalt in ein TMP-File
 // Ersetzt die ursprüngliche Datei mit der temporären
 // (Setzt Wert eines Feldes in dem mitgegebenen Objekt)
+
+_Bool contains(char * String, char Symbol){
+	for(unsigned char i = 0; 1;i++){
+		if(String[i]==Symbol) return 1;
+		if(String[i]=='\n') return 0;
+	}
+	return 0;
+}
+
 void set(char * path, char * feldname, char *newValue){
 	//Platz allozieren für zu bearbeitendes Feld
 	char ** obj=malloc(2);
@@ -142,7 +151,6 @@ void set(char * path, char * feldname, char *newValue){
 	obj[1]=malloc(50);
 	// Öffnen der mitgegebenen Datei und eines Temp Files
 	FILE * fp;
-	printf("test\n");
 	fp=fopen(path, "rw");
 	FILE* tmp;
 	char  TEMPLATE[]="./FXXXXXX";
@@ -152,17 +160,45 @@ void set(char * path, char * feldname, char *newValue){
 	//Durchlesen der Datei -> Feld kopieren || Feld bearbeiten
 	char *line = NULL;
 	size_t len = 0;
+	_Bool FieldExists=0;
+	unsigned char depth=0;
 	while(getline(&line, &len, fp) != -1) {
-		 if(!GetObj(line, obj)&&!strcmp(obj[0],feldname)){
-		 	fputs("    ",tmp);
-		 	fputs(obj[0],tmp);
-		 	fputs(": \"",tmp);
-		 	fputs(newValue,tmp);
-		 	fputs("\";\n",tmp);
-		 }else{
-		 	fputs(line,tmp);
-		 }
+		printf("Depth: %d\n",depth);
+		printf("1\n");
+		if(!GetObj(line, obj)){
+			if(!strcmp(obj[0],feldname)){
+				fputs("    ",tmp);
+				fputs(obj[0],tmp);
+				fputs(": \"",tmp);
+				fputs(newValue,tmp);
+				fputs("\";\n",tmp);
+				FieldExists=1;
+				continue;
+			}
+		}else{
+			printf("3\n");
+			if(contains(line,'{')){
+				depth++;
+				printf("4\n");
+			}
+			if(contains(line,'}')){
+				if(!--depth){
+					printf("TADA\n");
+					break;	
+				}
+			}
+		}
+		printf("5\n");
+		fputs(line,tmp);
 	}
+	if(!FieldExists){
+		fputs("    ",tmp);
+		fputs(feldname,tmp);
+		fputs(": \"",tmp);
+		fputs(newValue,tmp);
+		fputs("\";\n",tmp);
+	}
+	fputs(line,tmp);
 	free (obj[0]);
 	free (obj[1]);
 	free (obj);
@@ -192,7 +228,7 @@ void add(char * path, char * name){
 		FILE * fp;
 		fp=fopen(fullpath, "w");
 		fputs(name, fp);
-		fputs(":\n{\n}", fp);
+		fputs(":\n{\n}\n", fp);
 	}
 }
 
@@ -220,7 +256,7 @@ int main(int argN,char ** args){
 		case ADD:
 			if(argN>3) add(args[2], args[3]);
 			if(argN>2) add(".", args[2]);
-
+			else help(1);
 			break;
 		case LINK:
 			printf("LINK\n");
