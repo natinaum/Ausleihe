@@ -2,7 +2,6 @@ Ort
 | <Ort>
 | | objN.json (LINK)
 | | Personen
-| | | Symlink to Folder
 
 Person
 | <Name>
@@ -37,6 +36,9 @@ objN.json:
     Author:
     SN/ISBN:
     Verliehen:
+    Orte{
+	    "Ort1.json",
+    }
 }
 
 Server-API.c ----------------------\

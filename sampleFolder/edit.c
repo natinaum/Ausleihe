@@ -93,8 +93,7 @@ int GetObj(char *line,char ** obj){
 	}
 }
 
-
-//Gibt Inhalt eines angegebenen Feldes zurück
+//Gibt Felder wählbare Felder aus
 void getPossibleFields(FILE * fp,char ** obj){ 
 	char *line = NULL;
 	size_t len = 0;
@@ -104,6 +103,8 @@ void getPossibleFields(FILE * fp,char ** obj){
 			printf("%s\n",obj[0]);
 	}
 }
+
+//Gibt Inhalt eines angegebenen Feldes zurück
 void get(char * path, char * feldname){ 
 	printf("Hole aus %s folgendes Feld: %s \n", path, feldname);
 	char ** obj=malloc(2);
@@ -172,8 +173,29 @@ void set(char * path, char * feldname, char *newValue){
 	rename(TEMPLATE, path);
 }
 
-void add(
+_Bool file_exists(const char *filename)
+{
+    return access(filename, F_OK) == 0;
+}
+
+void add(char * path, char * name){
+	printf("ADD1\n");
+	char* fullpath=malloc(strlen(path)+strlen(name)+2);
 	printf("ADD\n");
+	strcpy(fullpath, path);
+	strcat(fullpath, "/");
+	strcat(fullpath, name);
+	strcat(fullpath, ".json");
+	printf("%s\n",fullpath);
+	if(file_exists(fullpath)) printf("File Already Exist");
+	else{
+		FILE * fp;
+		fp=fopen(fullpath, "w");
+		fputs(name, fp);
+		fputs(":\n{\n}", fp);
+	}
+}
+
 
 //Main Funktion: ruft zu Aufruf passende Funktion auf
 int main(int argN,char ** args){
@@ -196,6 +218,9 @@ int main(int argN,char ** args){
 			else help(1);
 			break;
 		case ADD:
+			if(argN>3) add(args[2], args[3]);
+			if(argN>2) add(".", args[2]);
+
 			break;
 		case LINK:
 			printf("LINK\n");
